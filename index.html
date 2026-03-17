@@ -378,12 +378,26 @@
                 return normalize(chunk) || '-';
             };
 
-            // Prefer label-to-next-label capture (most reliable for flattened PDF text)
-            let invoiceNo = getBetween(/No\.?\s*Pesanan\s*/i, /Tanggal\s*Transaksi\b/i);
-            let date = getBetween(/Tanggal\s*Transaksi\s*/i, /Metode\s*Pembayaran\b/i);
-            let payment = getBetween(/Metode\s*Pembayaran\s*/i, /Jasa\s*Kirim\b/i);
-            let buyer = getBetween(/Nama\s*Pembeli\s*:\s*/i, /Nama\s*Penjual\s*:\s*/i);
-            let seller = getBetween(/Nama\s*Penjual\s*:\s*/i, /Alamat\s*Pembeli\s*:\s*/i);
+            // Strategy A: Table-style layout (labels row + values row)
+            // "No. Pesanan Tanggal Transaksi Metode Pembayaran Jasa Kirim 260309EYTO23BA 09/03/26 Bank BCA Regular"
+            let invoiceNo = '-', date = '-', payment = '-', deliveryMethod = '-', buyer = '-', seller = '-';
+
+            const tableMatch = fullN.match(/No\.?\s*Pesanan\s+Tanggal\s*Transaksi\s+Metode\s*Pembayaran\s+Jasa\s*Kirim\s+([A-Z0-9]+)\s+([0-9]{2}\/[0-9]{2}\/[0-9]{2,4})\s+(Bank\s+[A-Za-z]+|ShopeePay|OVO|DANA|GoPay|COD|QRIS|Kartu\s+Kredit\s*\S*)\s+(\S+)/i);
+            if (tableMatch) {
+                invoiceNo = tableMatch[1];
+                date = tableMatch[2];
+                payment = tableMatch[3];
+                deliveryMethod = tableMatch[4];
+            } else {
+                // Strategy B: label-to-next-label capture (for non-table layouts)
+                invoiceNo = getBetween(/No\.?\s*Pesanan\s*/i, /Tanggal\s*Transaksi\b/i);
+                date = getBetween(/Tanggal\s*Transaksi\s*/i, /Metode\s*Pembayaran\b/i);
+                payment = getBetween(/Metode\s*Pembayaran\s*/i, /Jasa\s*Kirim\b/i);
+                deliveryMethod = getBetween(/Jasa\s*Kirim\s*/i, /Rincian\s*Pesanan\b/i);
+            }
+
+            buyer = getBetween(/Nama\s*Pembeli\s*:\s*/i, /Nama\s*Penjual\s*:\s*/i);
+            seller = getBetween(/Nama\s*Penjual\s*:\s*/i, /Alamat\s*Pembeli\s*:\s*/i);
 
             // Fallbacks (if any field fails)
             if (invoiceNo === '-' || /\s/.test(invoiceNo)) {
@@ -407,6 +421,12 @@
                 buyer = get([
                     /Nama\s*Pembeli\s*[:\s]*(\S+)/i,
                     /(?:Buyer|Customer|Kepada)\s*[:\s]*([^]+?)(?=\s+(?:Nama\s*Penjual|Alamat|No\.|Rincian)\b)/i
+                ]);
+            }
+
+            if (deliveryMethod === '-' || deliveryMethod.length > 30) {
+                deliveryMethod = get([
+                    /Jasa\s*Kirim\s*[:\s]*(Regular|Ekonomi|Express|Same\s*Day|Instant|Next\s*Day|Cargo|JNE|J&T|SiCepat|AnterAja|GoSend|GrabExpress)/i
                 ]);
             }
 
@@ -437,6 +457,7 @@
             const buyerClean = cleanOne(buyer);
             const sellerClean = cleanOne(seller);
             const paymentClean = cleanOne(payment);
+            const deliveryMethodClean = cleanOne(deliveryMethod);
             const invoiceNoClean = cleanOne(invoiceNo);
             const dateClean = cleanOne(date);
 
@@ -567,7 +588,7 @@
                 /(?:Grand\s*Total)\s*[:\s]*Rp?\s*([\d.,]+)/i
             ]));
 
-            return { invoiceNo: invoiceNoClean, date: dateClean, buyer: buyerClean, seller: sellerClean, payment: paymentClean, items, subtotal, shipping, serviceFee, discount, total };
+            return { invoiceNo: invoiceNoClean, date: dateClean, buyer: buyerClean, seller: sellerClean, payment: paymentClean, deliveryMethod: deliveryMethodClean, items, subtotal, shipping, serviceFee, discount, total };
         }
 
         function parseNumber(str) {
@@ -587,7 +608,8 @@
                 ['Tanggal Transaksi', data.date],
                 ['Nama Pembeli', data.buyer],
                 ['Nama Penjual', data.seller],
-                ['Metode Pembayaran', data.payment]
+                ['Metode Pembayaran', data.payment],
+                ['Jasa Kirim', data.deliveryMethod]
             ];
             table.innerHTML = rows.map(([l, v]) =>
                 `<tr><td class="label-cell">${l}</td><td class="value-cell">: ${v}</td></tr>`
