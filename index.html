@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verifikasi Invoice - Kalkulator Pembayaran</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: clamp(20px, 5vw, 28px);
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: clamp(12px, 3vw, 14px);
+        }
+
+        .content {
+            padding: 20px;
+        }
+
+        .upload-section {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 30px 20px;
+            text-align: center;
+            background: #f8f9ff;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-section h3 {
+            font-size: clamp(16px, 4vw, 20px);
+            margin-bottom: 10px;
+        }
+
+        .upload-section p {
+            font-size: clamp(12px, 3vw, 14px);
+            margin: 10px 0;
+            color: #666;
+        }
+
+        .upload-section:hover {
+            background: #f0f2ff;
+            border-color: #764ba2;
+        }
+
+        .upload-section.dragover {
+            background: #e8ebff;
+            border-color: #764ba2;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: clamp(35px, 10vw, 50px);
+            margin-bottom: 15px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: clamp(14px, 3.5vw, 16px);
+            font-weight: 600;
+            transition: transform 0.2s;
+            min-width: 120px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .results {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .card {
+            background: #f8f9ff;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: clamp(16px, 4vw, 20px);
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 15px;
+            padding: 12px 0;
+            border-bottom: 1px solid #e0e0e0;
+            flex-wrap: wrap;
+        }
+
+        .data-row:last-child {
+            border-bottom: none;
+        }
+
+        .label {
+            font-weight: 600;
+            color: #555;
+            font-size: clamp(13px, 3.5vw, 15px);
+            flex: 0 0 auto;
+            min-width: 120px;
+        }
+
+        .value {
+            color: #333;
+            font-weight: 500;
+            font-size: clamp(13px, 3.5vw, 15px);
+            text-align: right;
+            flex: 1;
+            word-break: break-word;
+        }
+
+        .verification-item {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            flex-wrap: wrap;
+        }
+
+        .verification-item .text {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .verification-item .text strong {
+            font-size: clamp(14px, 3.5vw, 16px);
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .verification-item .text div {
+            font-size: clamp(12px, 3vw, 14px);
+        }
+
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: clamp(12px, 3vw, 14px);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .status.valid {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.invalid {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .total-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        .total-section h3 {
+            color: white;
+            margin-bottom: 10px;
+            font-size: clamp(16px, 4vw, 20px);
+        }
+
+        .success-badge,
+        .warning-badge {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            margin-top: 15px;
+            font-size: clamp(13px, 3.5vw, 15px);
+        }
+
+        .success-badge {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .warning-badge {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+            font-size: clamp(13px, 3.5vw, 14px);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .content {
+                padding: 15px;
+            }
+
+            .card {
+                padding: 15px;
+            }
+
+            .upload-section {
+                padding: 25px 15px;
+            }
+
+            .verification-item {
+                padding: 12px;
+            }
+
+            .label {
+                min-width: 100px;
+            }
+
+            .verification-item .text {
+                min-width: 150px;
+            }
+
+            .data-row {
+                gap: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                border-radius: 15px;
+            }
+
+            .header {
+                padding: 20px 15px;
+            }
+
+            .content {
+                padding: 12px;
+            }
+
+            .card {
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+
+            .upload-section {
+                padding: 20px 12px;
+            }
+
+            .btn {
+                width: 100%;
+                padding: 12px 20px;
+            }
+
+            .label {
+                min-width: 80px;
+                font-size: 13px;
+            }
+
+            .value {
+                font-size: 13px;
+            }
+
+            .verification-item {
+                padding: 10px;
+                gap: 10px;
+            }
+
+            .verification-item .text {
+                min-width: 120px;
+            }
+
+            .status {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧾 Verifikasi Invoice</h1>
+            <p>Upload file PDF invoice untuk memverifikasi perhitungan pembayaran</p>
+        </div>
+
+        <div class="content">
+            <div class="upload-section" id="uploadSection">
+                <div class="upload-icon">📄</div>
+                <h3>Klik atau Drag & Drop File PDF</h3>
+                <p style="margin: 15px 0; color: #666;">Upload invoice dalam format PDF untuk diverifikasi</p>
+                <button class="btn" onclick="document.getElementById('fileInput').click()">Pilih File</button>
+                <input type="file" id="fileInput" accept=".pdf" />
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Memproses invoice...</p>
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+
+            <div class="results" id="results">
+                <div class="card">
+                    <h3>📊 Data Invoice</h3>
+                    <div id="invoiceData"></div>
+                </div>
+
+                <div class="card">
+                    <h3>✅ Hasil Verifikasi</h3>
+                    <div id="verificationResults"></div>
+                </div>
+
+                <div class="total-section">
+                    <h3>💰 Status Verifikasi Keseluruhan</h3>
+                    <div id="overallStatus"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        const uploadSection = document.getElementById('uploadSection');
+        const fileInput = document.getElementById('fileInput');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Drag and drop handlers
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === 'application/pdf') {
+                handleFile(file);
+            } else {
+                showError('Mohon upload file PDF yang valid');
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        });
+
+        function formatRupiah(amount) {
+            return 'Rp' + amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        }
+
+        function parseRupiah(str) {
+            return parseInt(str.replace(/[^\d]/g, '')) || 0;
+        }
+
+        function extractMultipleItems(text) {
+            const items = [];
+            
+            console.log('=== Starting item extraction ===');
+            
+            // Pattern 1: Look for all occurrences of Rp X Qty Rp pattern
+            // This is the most reliable pattern for invoice items
+            const allPricePatterns = text.matchAll(/Rp\s*([0-9.,]+)\s+(\d+)\s+Rp\s*([0-9.,]+)/g);
+            const priceMatches = Array.from(allPricePatterns);
+            
+            console.log(`Found ${priceMatches.length} price patterns`);
+            
+            if (priceMatches.length > 0) {
+                // Try to find product names before each price pattern
+                priceMatches.forEach((match, index) => {
+                    const matchPosition = match.index;
+                    const harga = parseRupiah(match[1]);
+                    const kuantitas = parseInt(match[2]);
+                    const subtotal = parseRupiah(match[3]);
+                    
+                    // Look backwards from match position to find product name
+                    const textBeforeMatch = text.substring(Math.max(0, matchPosition - 200), matchPosition);
+                    const lines = textBeforeMatch.split(/\r?\n/).filter(l => l.trim().length > 0);
+                    
+                    // Get the last non-empty line before the price as product name
+                    let productName = 'Produk ' + (index + 1);
+                    if (lines.length > 0) {
+                        const lastLine = lines[lines.length - 1].trim();
+                        // Clean up common noise
+                        const cleaned = lastLine
+                            .replace(/^\d+\s+/, '') // Remove leading numbers
+                            .replace(/^[-•]\s+/, '') // Remove bullets
+                            .replace(/Harga\s+Produk/i, '')
+                            .replace(/Kuantitas/i, '')
+                            .replace(/Subtotal/i, '')
+                            .trim();
+                        
+                        if (cleaned.length > 3 && cleaned.length < 200 && !cleaned.match(/^Rp/)) {
+                            productName = cleaned;
+                        }
+                    }
+                    
+                    const item = {
+                        no: index + 1,
+                        nama: productName,
+                        harga: harga,
+                        kuantitas: kuantitas,
+                        subtotal: subtotal
+                    };
+                    
+                    items.push(item);
+                    console.log(`Item ${index + 1}:`, item);
+                });
+            }
+            
+            // Pattern 2: Try structured table extraction if pattern 1 didn't work well
+            if (items.length === 0) {
+                console.log('Trying structured table pattern...');
+                
+                // Look for table header
+                const tableMatch = text.match(/(?:No\.|#)\s*Produk.*?Harga.*?Kuantitas.*?Subtotal([\s\S]*?)(?:Subtotal\s+Rp|Total\s+Kuantitas)/i);
+                
+                if (tableMatch) {
+                    const tableContent = tableMatch[1];
+                    console.log('Table content:', tableContent.substring(0, 200));
+                    
+                    // Try to extract rows
+                    const rowPattern = /(\d+)\s+([\s\S]*?)\s+Rp\s*([0-9.,]+)\s+(\d+)\s+Rp\s*([0-9.,]+)/g;
+                    let match;
+                    
+                    while ((match = rowPattern.exec(tableContent)) !== null) {
+                        const item = {
+                            no: parseInt(match[1]),
+                            nama: match[2].trim().replace(/\s+/g, ' ').substring(0, 200),
+                            harga: parseRupiah(match[3]),
+                            kuantitas: parseInt(match[4]),
+                            subtotal: parseRupiah(match[5])
+                        };
+                        items.push(item);
+                        console.log('Found item (structured):', item);
+                    }
+                }
+            }
+            
+            // Pattern 3: Aggressive line-by-line search
+            if (items.length === 0) {
+                console.log('Trying line-by-line extraction...');
+                const lines = text.split(/\r?\n/);
+                
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    const priceMatch = line.match(/Rp\s*([0-9.,]+)\s+(\d+)\s+Rp\s*([0-9.,]+)/);
+                    
+                    if (priceMatch) {
+                        // Look at previous 1-3 lines for product name
+                        let productName = 'Produk ' + (items.length + 1);
+                        
+                        for (let j = 1; j <= 3 && (i - j) >= 0; j++) {
+                            const prevLine = lines[i - j].trim();
+                            if (prevLine.length > 5 && 
+                                !prevLine.match(/Rp\s*[0-9]/) && 
+                                !prevLine.match(/Harga|Kuantitas|Subtotal/i) &&
+                                !prevLine.match(/^\d+$/)) {
+                                productName = prevLine;
+                                break;
+                            }
+                        }
+                        
+                        const item = {
+                            no: items.length + 1,
+                            nama: productName.substring(0, 200),
+                            harga: parseRupiah(priceMatch[1]),
+                            kuantitas: parseInt(priceMatch[2]),
+                            subtotal: parseRupiah(priceMatch[3])
+                        };
+                        
+                        // Avoid duplicates
+                        if (!items.some(existing => 
+                            existing.harga === item.harga && 
+                            existing.kuantitas === item.kuantitas && 
+                            existing.subtotal === item.subtotal)) {
+                            items.push(item);
+                            console.log('Found item (line-by-line):', item);
+                        }
+                    }
+                }
+            }
+            
+            console.log(`=== Total items found: ${items.length} ===`);
+            return items;
+        }
+
+        async function handleFile(file) {
+            showLoading();
+            hideError();
+            results.style.display = 'none';
+
+            try {
+                const text = await extractTextFromPDF(file);
+                const invoiceData = parseInvoiceData(text);
+                const verification = verifyCalculations(invoiceData);
+                displayResults(invoiceData, verification);
+            } catch (error) {
+                showError('Gagal memproses PDF: ' + error.message);
+                console.error(error);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function extractTextFromPDF(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            let fullText = '';
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(' ');
+                fullText += pageText + ' ';
+            }
+
+            return fullText;
+        }
+
+        function parseInvoiceData(text) {
+            const data = {
+                items: [], // Array of items
+                hargaProduk: 0,
+                kuantitas: 0,
+                subtotal: 0,
+                totalPesanan: 0,
+                pengiriman: 0,
+                biayaLayanan: 0,
+                diskonPengiriman: 0,
+                totalPembayaran: 0,
+                rawText: text // Store for debugging
+            };
+
+            console.log('Extracted Text:', text); // Debug
+
+            // First, try to extract multiple items from table
+            data.items = extractMultipleItems(text);
+
+            // Multiple pattern attempts for each field
+            const patterns = {
+                hargaProduk: [
+                    /Harga\s*Produk[:\s]+Rp[\s]*([0-9.,]+)/i,
+                    /Harga\s*Produk[:\s]+([0-9.,]+)/i,
+                    /Produk[:\s]+Rp[\s]*([0-9.,]+)/i,
+                    /Rp\s*([0-9.,]+)\s+\d+\s+Rp/i // Pattern: Rp463.500 1 Rp463.500
+                ],
+                kuantitas: [
+                    /Kuantitas[:\s]+(\d+)/i,
+                    /Rp[0-9.,]+\s+(\d+)\s+Rp/i, // Pattern: Rp463.500 1 Rp463.500
+                    /\s(\d+)\s+Rp[0-9.,]+\s*$/i,
+                    /Total\s*Kuantitas[^)]*\(Aktif\)[:\s]*(\d+)/i
+                ],
+                subtotal: [
+                    /Subtotal[:\s]+Rp[\s]*([0-9.,]+)/i,
+                    /Subtotal\s+Rp\s*([0-9.,]+)/i,
+                    /Kuantitas.*?Subtotal\s+Rp\s*([0-9.,]+)/is
+                ],
+                totalPesanan: [
+                    /Total\s*Pesanan[:\s]+Rp[\s]*([0-9.,]+)/i,
+                    /otal\s*Pesanan[:\s]+Rp\s*([0-9.,]+)/i
+                ],
+                pengiriman: [
+                    /Total\s*Pengiriman[:\s]+Rp[\s]*([0-9.,]+)/i,
+                    /Pengiriman[:\s]+Rp[\s]*([0-9.,]+)/i,
+                    /otal\s*Pengiriman\s+Rp\s*([0-9.,]+)/i
+                ],
+                biayaLayanan: [
+                    /Biaya\s*Layanan[:\s]+Rp[\s]*([0-9.,]+)/i,
+                    /iaya\s*Layanan\s+Rp\s*([0-9.,]+)/i,
+                    /Layanan\s+Rp\s*([0-9.,]+)/i
+                ],
+                diskonPengiriman: [
+                    /Diskon\s*Pengiriman[:\s]+-?Rp[\s]*([0-9.,]+)/i,
+                    /iskon\s*Pengiriman\s+-?Rp\s*([0-9.,]+)/i,
+                    /Diskon.*?-Rp\s*([0-9.,]+)/i
+                ],
+                totalPembayaran: [
+                    /Total\s*Pembayaran[:\s]+Rp[\s]*([0-9.,]+)/i,
+                    /otal\s*Pembayaran\s+Rp\s*([0-9.,]+)/i,
+                    /Pembayaran\s+Rp\s*([0-9.,]+)/i
+                ]
+            };
+
+            // Try each pattern until one matches
+            for (const [key, patternList] of Object.entries(patterns)) {
+                for (const pattern of patternList) {
+                    const match = text.match(pattern);
+                    if (match) {
+                        const value = key === 'kuantitas' ? parseInt(match[1]) : parseRupiah(match[1]);
+                        if (value > 0) {
+                            data[key] = value;
+                            console.log(`Found ${key}: ${value}`); // Debug
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Fallback: try to find table-like structure
+            if (data.hargaProduk === 0 || data.kuantitas === 0) {
+                // Look for pattern: Rp463.500 1 Rp463.500
+                const tableMatch = text.match(/Rp\s*([0-9.,]+)\s+(\d+)\s+Rp\s*([0-9.,]+)/);
+                if (tableMatch) {
+                    if (data.hargaProduk === 0) data.hargaProduk = parseRupiah(tableMatch[1]);
+                    if (data.kuantitas === 0) data.kuantitas = parseInt(tableMatch[2]);
+                    if (data.subtotal === 0) data.subtotal = parseRupiah(tableMatch[3]);
+                    console.log('Found via table pattern:', tableMatch[0]); // Debug
+                }
+            }
+
+            // If items found, calculate totals
+            if (data.items.length > 0) {
+                data.kuantitas = data.items.reduce((sum, item) => sum + item.kuantitas, 0);
+                data.subtotal = data.items.reduce((sum, item) => sum + item.subtotal, 0);
+                console.log(`Found ${data.items.length} items, total qty: ${data.kuantitas}, total subtotal: ${data.subtotal}`);
+            }
+
+            return data;
+        }
+
+        function verifyCalculations(data) {
+            const checks = [];
+
+            // Check each item's subtotal
+            if (data.items.length > 0) {
+                data.items.forEach(item => {
+                    const expectedSubtotal = item.harga * item.kuantitas;
+                    checks.push({
+                        name: `Item ${item.no}: ${item.nama.substring(0, 50)}${item.nama.length > 50 ? '...' : ''}`,
+                        expected: expectedSubtotal,
+                        actual: item.subtotal,
+                        valid: expectedSubtotal === item.subtotal,
+                        formula: `${formatRupiah(item.harga)} × ${item.kuantitas} = ${formatRupiah(expectedSubtotal)}`,
+                        isItemCheck: true
+                    });
+                });
+
+                // Check total of all items
+                const expectedTotalSubtotal = data.items.reduce((sum, item) => sum + (item.harga * item.kuantitas), 0);
+                checks.push({
+                    name: 'Total Semua Item',
+                    expected: expectedTotalSubtotal,
+                    actual: data.subtotal,
+                    valid: expectedTotalSubtotal === data.subtotal,
+                    formula: `Jumlah ${data.items.length} item = ${formatRupiah(expectedTotalSubtotal)}`,
+                    isItemCheck: false
+                });
+            } else {
+                // Single item check (backward compatibility)
+                const expectedSubtotal = data.hargaProduk * data.kuantitas;
+                checks.push({
+                    name: 'Subtotal Produk',
+                    expected: expectedSubtotal,
+                    actual: data.subtotal,
+                    valid: expectedSubtotal === data.subtotal,
+                    formula: `${formatRupiah(data.hargaProduk)} × ${data.kuantitas} = ${formatRupiah(expectedSubtotal)}`,
+                    isItemCheck: false
+                });
+            }
+
+            // Check 2: Total Pesanan = Subtotal (should match)
+            checks.push({
+                name: 'Total Pesanan',
+                expected: data.subtotal,
+                actual: data.totalPesanan,
+                valid: data.subtotal === data.totalPesanan,
+                formula: `Subtotal = ${formatRupiah(data.subtotal)}`,
+                isItemCheck: false
+            });
+
+            // Check 3: Total Pembayaran = Total Pesanan + Pengiriman + Biaya Layanan - Diskon
+            const expectedTotal = data.totalPesanan + data.pengiriman + data.biayaLayanan - data.diskonPengiriman;
+            checks.push({
+                name: 'Total Pembayaran',
+                expected: expectedTotal,
+                actual: data.totalPembayaran,
+                valid: expectedTotal === data.totalPembayaran,
+                formula: `${formatRupiah(data.totalPesanan)} + ${formatRupiah(data.pengiriman)} + ${formatRupiah(data.biayaLayanan)} - ${formatRupiah(data.diskonPengiriman)} = ${formatRupiah(expectedTotal)}`,
+                isItemCheck: false
+            });
+
+            return checks;
+        }
+
+        function displayResults(data, verification) {
+            // Display items table if multiple items exist
+            let itemsTableHTML = '';
+            if (data.items.length > 0) {
+                itemsTableHTML = `
+                    <div class="card">
+                        <h3>🛒 Daftar Item (${data.items.length} produk)</h3>
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: #667eea; color: white;">
+                                        <th style="padding: 12px; text-align: left;">No</th>
+                                        <th style="padding: 12px; text-align: left;">Produk</th>
+                                        <th style="padding: 12px; text-align: right;">Harga</th>
+                                        <th style="padding: 12px; text-align: center;">Qty</th>
+                                        <th style="padding: 12px; text-align: right;">Subtotal</th>
+                                        <th style="padding: 12px; text-align: center;">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${data.items.map(item => {
+                                        const isValid = (item.harga * item.kuantitas) === item.subtotal;
+                                        return `
+                                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                                <td style="padding: 12px;">${item.no}</td>
+                                                <td style="padding: 12px; max-width: 300px;">${item.nama}</td>
+                                                <td style="padding: 12px; text-align: right;">${formatRupiah(item.harga)}</td>
+                                                <td style="padding: 12px; text-align: center;">${item.kuantitas}</td>
+                                                <td style="padding: 12px; text-align: right; font-weight: 600;">${formatRupiah(item.subtotal)}</td>
+                                                <td style="padding: 12px; text-align: center;">
+                                                    <span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background: ${isValid ? '#d4edda' : '#f8d7da'}; color: ${isValid ? '#155724' : '#721c24'};">
+                                                        ${isValid ? '✓' : '✗'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Display invoice data
+            const invoiceDataHTML = `
+                <div class="data-row">
+                    <span class="label">Jumlah Item:</span>
+                    <span class="value">${data.items.length > 0 ? data.items.length + ' produk' : '1 produk'}</span>
+                </div>
+                ${data.items.length === 0 ? `
+                <div class="data-row">
+                    <span class="label">Harga Produk:</span>
+                    <span class="value">${data.hargaProduk > 0 ? formatRupiah(data.hargaProduk) : '<span style="color: #f44336;">Tidak terdeteksi</span>'}</span>
+                </div>
+                ` : ''}
+                <div class="data-row">
+                    <span class="label">Total Kuantitas:</span>
+                    <span class="value">${data.kuantitas > 0 ? data.kuantitas + ' unit' : '<span style="color: #f44336;">Tidak terdeteksi</span>'}</span>
+                </div>
+                <div class="data-row">
+                    <span class="label">Subtotal:</span>
+                    <span class="value">${data.subtotal > 0 ? formatRupiah(data.subtotal) : '<span style="color: #f44336;">Tidak terdeteksi</span>'}</span>
+                </div>
+                <div class="data-row">
+                    <span class="label">Total Pesanan:</span>
+                    <span class="value">${data.totalPesanan > 0 ? formatRupiah(data.totalPesanan) : '<span style="color: #f44336;">Tidak terdeteksi</span>'}</span>
+                </div>
+                <div class="data-row">
+                    <span class="label">Pengiriman:</span>
+                    <span class="value">${data.pengiriman > 0 ? formatRupiah(data.pengiriman) : '<span style="color: #f44336;">Tidak terdeteksi</span>'}</span>
+                </div>
+                <div class="data-row">
+                    <span class="label">Biaya Layanan:</span>
+                    <span class="value">${data.biayaLayanan > 0 ? formatRupiah(data.biayaLayanan) : '<span style="color: #f44336;">Tidak terdeteksi</span>'}</span>
+                </div>
+                <div class="data-row">
+                    <span class="label">Diskon Pengiriman:</span>
+                    <span class="value">${data.diskonPengiriman > 0 ? '-' + formatRupiah(data.diskonPengiriman) : '<span style="color: #999;">Tidak ada</span>'}</span>
+                </div>
+                <div class="data-row">
+                    <span class="label"><strong>Total Pembayaran:</strong></span>
+                    <span class="value"><strong>${data.totalPembayaran > 0 ? formatRupiah(data.totalPembayaran) : '<span style="color: #f44336;">Tidak terdeteksi</span>'}</strong></span>
+                </div>
+                ${data.hargaProduk === 0 && data.items.length === 0 ? 
+                    '<div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 8px; font-size: 14px; color: #856404;"><strong>💡 Tips:</strong> Buka Console Browser (F12) untuk melihat teks yang berhasil diekstrak dari PDF</div>' 
+                    : ''}
+            `;
+
+            // Insert items table before invoice data
+            if (itemsTableHTML) {
+                document.getElementById('results').insertAdjacentHTML('afterbegin', itemsTableHTML);
+            }
+            
+            document.getElementById('invoiceData').innerHTML = invoiceDataHTML;
+
+            // Display verification results
+            let verificationHTML = '';
+            let allValid = true;
+
+            verification.forEach(check => {
+                if (!check.valid) allValid = false;
+                const itemClass = check.isItemCheck ? 'style="background: #f0f2ff;"' : '';
+                verificationHTML += `
+                    <div class="verification-item" ${itemClass}>
+                        <div class="text">
+                            <strong>${check.name}</strong>
+                            <div style="color: #666; font-size: 14px; margin-top: 5px;">${check.formula}</div>
+                            ${!check.valid ? `<div style="color: #721c24; font-size: 14px; margin-top: 5px;">Ditemukan: ${formatRupiah(check.actual)}</div>` : ''}
+                        </div>
+                        <span class="status ${check.valid ? 'valid' : 'invalid'}">
+                            ${check.valid ? '✓ BENAR' : '✗ SALAH'}
+                        </span>
+                    </div>
+                `;
+            });
+            document.getElementById('verificationResults').innerHTML = verificationHTML;
+
+            // Display overall status
+            const overallStatusHTML = allValid
+                ? '<div class="success-badge">✓ Semua perhitungan BENAR</div>'
+                : '<div class="warning-badge">⚠ Terdapat kesalahan perhitungan</div>';
+            document.getElementById('overallStatus').innerHTML = overallStatusHTML;
+
+            results.style.display = 'block';
+        }
+
+        function showLoading() {
+            loading.style.display = 'block';
+        }
+
+        function hideLoading() {
+            loading.style.display = 'none';
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
