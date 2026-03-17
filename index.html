@@ -433,7 +433,7 @@
 
             if (seller === '-' || seller.length > 80) {
                 seller = get([
-                    /Nama\s*Penjual\s*[:\s]*(\S+(?:\.\S+)*)/i,
+                    /Nama\s*Penjual\s*[:\s]*(.+?)(?=\s{2,}|\n|Alamat|No\.|Rincian|Tanggal|$)/i,
                     /(?:Seller|Vendor|Dari)\s*[:\s]*([^]+?)(?=\s+(?:Alamat|No\.|Rincian|Tanggal)\b)/i
                 ]);
             }
