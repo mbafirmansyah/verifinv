@@ -6,741 +6,372 @@
     <title>Verifikasi Invoice</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
-        /* RESET BUTTON */
-        .reset-btn { display:none; width:100%; padding:14px; margin-top:16px; background:#4CAF50; color:#fff; border:none; border-radius:12px; font-size:16px; font-weight:600; cursor:pointer; }
-        .reset-btn:hover { background:#388E3C; }
-
-        /* RESET & BASE */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
-            color: #333;
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        /* CONTAINER */
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: #fff;
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-
-        /* HEADER - Shopee style */
-        .header {
-            background: linear-gradient(135deg, #ee4d2d, #ff6633);
-            color: #fff;
-            padding: 20px 24px;
-            text-align: center;
-        }
-        .header h1 { font-size: 22px; font-weight: 600; }
-        .header p { font-size: 13px; opacity: 0.9; margin-top: 4px; }
-
-        /* SECTIONS */
-        .section {
-            padding: 16px 24px;
-            border-bottom: 1px dashed #e0e0e0;
-        }
-        .section:last-child { border-bottom: none; }
-        .section-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #ee4d2d;
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        /* UPLOAD AREA */
-        .upload-area {
-            border: 2px dashed #ccc;
-            border-radius: 8px;
-            padding: 40px 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: #fafafa;
-        }
-        .upload-area:hover, .upload-area.dragover {
-            border-color: #ee4d2d;
-            background: #fff5f2;
-        }
-        .upload-area .icon { font-size: 40px; margin-bottom: 8px; }
-        .upload-area .label { font-size: 14px; color: #666; }
-        .upload-area .sublabel { font-size: 12px; color: #999; margin-top: 4px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; min-height: 100vh; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .header { background: linear-gradient(135deg, #ee4d2d, #ff6b4a); color: white; padding: 20px; border-radius: 10px 10px 0 0; text-align: center; }
+        .header h1 { font-size: 24px; margin-bottom: 5px; }
+        .header p { opacity: 0.9; font-size: 14px; }
+        .content { background: white; padding: 20px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .upload-area { border: 2px dashed #ddd; border-radius: 10px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; margin-bottom: 20px; }
+        .upload-area:hover { border-color: #ee4d2d; background: #fff5f3; }
+        .upload-area.dragover { border-color: #ee4d2d; background: #fff5f3; }
+        .upload-icon { font-size: 48px; color: #ee4d2d; margin-bottom: 10px; }
+        .upload-text { color: #666; margin-bottom: 10px; }
+        .upload-hint { font-size: 12px; color: #999; }
         #fileInput { display: none; }
-
-        /* LOADING */
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 30px;
-        }
-        .loading.active { display: block; }
-        .spinner {
-            width: 36px; height: 36px;
-            border: 3px solid #f0f0f0;
-            border-top: 3px solid #ee4d2d;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 0 auto 10px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .loading p { font-size: 13px; color: #888; }
-
-        /* INFO TABLE - Shopee receipt style */
-        .info-table {
-            width: 100%;
-            font-size: 13px;
-        }
-        .info-table td {
-            padding: 6px 0;
-            vertical-align: top;
-        }
-        .info-table .label-cell {
-            color: #888;
-            width: 180px;
-            white-space: nowrap;
-        }
-        .info-table .value-cell {
-            color: #333;
-            font-weight: 500;
-        }
-
-        /* ITEMS TABLE */
-        .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-            margin-top: 8px;
-        }
-        .items-table thead {
-            background: #fafafa;
-        }
-        .items-table th {
-            padding: 10px 8px;
-            text-align: left;
-            font-weight: 600;
-            color: #555;
-            border-bottom: 1px solid #e0e0e0;
-            font-size: 12px;
-        }
-        .items-table td {
-            padding: 10px 8px;
-            border-bottom: 1px solid #f0f0f0;
-        }
-        .items-table th:last-child,
-        .items-table td:last-child { text-align: right; }
-        .items-table th:nth-child(3),
-        .items-table td:nth-child(3) { text-align: center; }
-
-        /* SUMMARY TABLE */
-        .summary-table {
-            width: 100%;
-            font-size: 13px;
-        }
-        .summary-table td {
-            padding: 6px 0;
-        }
-        .summary-table .sum-label { color: #888; }
-        .summary-table .sum-value { text-align: right; color: #333; font-weight: 500; }
-        .summary-table .total-row .sum-label { color: #333; font-weight: 700; font-size: 15px; }
-        .summary-table .total-row .sum-value { color: #ee4d2d; font-weight: 700; font-size: 15px; }
-
-        /* VERIFICATION RESULTS */
-        .verif-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 12px;
-            margin-bottom: 6px;
-            border-radius: 4px;
-            font-size: 13px;
-            background: #fafafa;
-        }
-        .verif-item .check-label { color: #555; }
-        .badge {
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-        .badge.valid { background: #e8f5e9; color: #2e7d32; }
-        .badge.invalid { background: #ffebee; color: #c62828; }
-
-        /* STATUS BOX */
-        .status-box {
-            padding: 16px;
-            border-radius: 6px;
-            text-align: center;
-            font-size: 15px;
-            font-weight: 600;
-        }
-        .status-box.valid {
-            background: #e8f5e9;
-            color: #2e7d32;
-            border: 1px solid #a5d6a7;
-        }
-        .status-box.invalid {
-            background: #ffebee;
-            color: #c62828;
-            border: 1px solid #ef9a9a;
-        }
-
-        /* FOOTER */
-        .footer {
-            text-align: center;
-            padding: 12px;
-            font-size: 11px;
-            color: #aaa;
-            background: #fafafa;
-            border-top: 1px solid #e0e0e0;
-        }
-
-        /* CALC BREAKDOWN */
-        .calc-section {
-            margin-bottom: 14px;
-        }
-        .calc-title {
-            font-size: 14px;
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 4px;
-        }
-        .calc-detail {
-            font-size: 13px;
-            color: #888;
-        }
-        .calc-detail.highlight {
-            display: inline-block;
-            background: linear-gradient(135deg, #ee4d2d, #ff6633);
-            color: #fff;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 3px;
-            margin-bottom: 2px;
-        }
-
-        /* HIDDEN */
+        .loading { display: none; text-align: center; padding: 40px; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #ee4d2d; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .result { display: none; }
+        .section { margin-bottom: 20px; }
+        .section-title { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid #ee4d2d; }
+        .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .info-item { background: #f9f9f9; padding: 10px; border-radius: 5px; }
+        .info-label { font-size: 12px; color: #666; margin-bottom: 3px; }
+        .info-value { font-size: 14px; color: #333; font-weight: 500; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f9f9f9; font-weight: 600; font-size: 13px; color: #666; }
+        td { font-size: 14px; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; }
+        .badge-success { background: #e8f5e9; color: #2e7d32; }
+        .badge-danger { background: #ffebee; color: #c62828; }
+        .summary-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .summary-row.total { font-weight: 700; font-size: 16px; color: #ee4d2d; border-bottom: none; padding-top: 10px; }
+        .verification-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f9f9f9; border-radius: 5px; margin-bottom: 8px; }
+        .status-box { padding: 15px; border-radius: 8px; text-align: center; margin-top: 20px; }
+        .status-box.valid { background: #e8f5e9; border: 1px solid #a5d6a7; }
+        .status-box.invalid { background: #ffebee; border: 1px solid #ef9a9a; }
+        .status-box h3 { margin-bottom: 5px; }
+        .status-box.valid h3 { color: #2e7d32; }
+        .status-box.invalid h3 { color: #c62828; }
+        .btn { display: inline-block; padding: 10px 20px; border-radius: 5px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.3s; }
+        .btn-primary { background: #ee4d2d; color: white; }
+        .btn-primary:hover { background: #d73d1d; }
+        .btn-block { display: block; width: 100%; margin-top: 20px; }
         .hidden { display: none; }
+        .discount { color: #2e7d32; }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- HEADER -->
         <div class="header">
             <h1>🧾 Verifikasi Invoice</h1>
-            <p>Upload file PDF invoice untuk memverifikasi perhitungan pembayaran</p>
+            <p>Upload invoice PDF untuk memverifikasi keaslian dan perhitungan</p>
         </div>
-
-        <!-- UPLOAD SECTION -->
-        <div class="section" id="uploadSection">
+        <div class="content">
             <div class="upload-area" id="uploadArea">
-                <div class="icon">📄</div>
-                <div class="label">Klik atau Drag & Drop File PDF</div>
-                <div class="sublabel">Upload invoice dalam format PDF untuk diverifikasi</div>
+                <div class="upload-icon">📄</div>
+                <div class="upload-text">Klik atau drag & drop file PDF invoice</div>
+                <div class="upload-hint">Mendukung file PDF dari Shopee</div>
+                <input type="file" id="fileInput" accept=".pdf">
             </div>
-            <input type="file" id="fileInput" accept=".pdf">
-        </div>
-
-        <!-- LOADING -->
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Memproses invoice...</p>
-        </div>
-
-        <!-- DATA INVOICE -->
-        <div class="section hidden" id="invoiceDataSection">
-            <div class="section-title">📊 Data Invoice</div>
-            <table class="info-table" id="invoiceInfo"></table>
-        </div>
-
-        <!-- ITEMS -->
-        <div class="section hidden" id="itemsSection">
-            <div class="section-title">Rincian Pesanan</div>
-            <table class="items-table">
-                <thead>
-                    <tr>
-                        <th>No.</th>
-                        <th>Produk</th>
-                        <th>Kuantitas</th>
-                        <th>Harga</th>
-                        <th>Subtotal</th>
-                    </tr>
-                </thead>
-                <tbody id="itemsBody"></tbody>
-            </table>
-        </div>
-
-        <!-- SUMMARY -->
-        <div class="section hidden" id="summarySection">
-            <table class="summary-table" id="summaryTable"></table>
-        </div>
-
-        <!-- VERIFICATION -->
-        <div class="section hidden" id="verifSection">
-            <div class="section-title">✅ Hasil Verifikasi</div>
-            <div id="verifResults"></div>
-        </div>
-
-        <!-- STATUS -->
-        <div class="section hidden" id="statusSection">
-            <div class="section-title">💰 Status Verifikasi Keseluruhan</div>
-            <div id="statusBox"></div>
-            <button class="reset-btn" id="resetBtn" onclick="resetUpload()">📄 Upload PDF Lain</button>
-        </div>  
-
-        <!-- FOOTER -->
-        <div class="footer">
-            Biaya-biaya yang ditagihkan (jika ada) sudah termasuk PPN
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Memproses invoice...</p>
+            </div>
+            <div class="result" id="result">
+                <div class="section">
+                    <div class="section-title">📋 Data Invoice</div>
+                    <div class="info-grid" id="invoiceInfo"></div>
+                </div>
+                <div class="section">
+                    <div class="section-title">🛒 Rincian Produk</div>
+                    <table id="itemsTable">
+                        <thead>
+                            <tr>
+                                <th>Produk</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-right">Harga</th>
+                                <th class="text-right">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="section">
+                    <div class="section-title">💰 Ringkasan Pembayaran</div>
+                    <div id="summarySection"></div>
+                </div>
+                <div class="section">
+                    <div class="section-title">✅ Hasil Verifikasi</div>
+                    <div id="verificationResults"></div>
+                </div>
+                <div id="statusBox"></div>
+                <button class="btn btn-primary btn-block" onclick="resetUpload()">Upload Invoice Lain</button>
+            </div>
         </div>
     </div>
 
     <script>
-        // PDF.js worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-        // DOM refs
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         const loading = document.getElementById('loading');
+        const result = document.getElementById('result');
 
-        // Upload handlers
         uploadArea.addEventListener('click', () => fileInput.click());
-        uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+        uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
         uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
-        uploadArea.addEventListener('drop', e => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
-        });
-        fileInput.addEventListener('change', e => { if (e.target.files[0]) processFile(e.target.files[0]); });
+        uploadArea.addEventListener('drop', (e) => { e.preventDefault(); uploadArea.classList.remove('dragover'); if (e.dataTransfer.files.length) processFile(e.dataTransfer.files[0]); });
+        fileInput.addEventListener('change', (e) => { if (e.target.files.length) processFile(e.target.files[0]); });
 
         async function processFile(file) {
-            if (file.type !== 'application/pdf') { alert('Hanya file PDF yang diterima'); return; }
-            document.getElementById('uploadSection').classList.add('hidden');
-            loading.classList.add('active');
-
+            if (file.type !== 'application/pdf') { alert('Mohon upload file PDF'); return; }
+            uploadArea.style.display = 'none';
+            loading.style.display = 'block';
             try {
                 const arrayBuffer = await file.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
                 let fullText = '';
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
-                    const content = await page.getTextContent();
-                    fullText += content.items.map(item => item.str).join(' ') + '\n';
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    fullText += pageText + '\n';
                 }
                 parseAndDisplay(fullText);
-            } catch (err) {
-                alert('Gagal memproses PDF: ' + err.message);
-                document.getElementById('uploadSection').classList.remove('hidden');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Gagal memproses PDF: ' + error.message);
+                resetUpload();
             }
-            loading.classList.remove('active');
-        }
-
-        function parseAndDisplay(text) {
-            console.log('--- RAW PDF TEXT ---');
-            console.log(text);
-            console.log('--- END RAW TEXT ---');
-            const data = parseInvoice(text);
-            console.log('--- PARSED DATA ---', data);
-            displayInvoiceInfo(data);
-            displayItems(data.items);
-            displaySummary(data);
-            verifyCalculations(data);
-        }
-
-        function parseInvoice(text) {
-            const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-            const full = lines.join(' ');
-
-            const get = (patterns) => {
-                for (const p of patterns) {
-                    const m = full.match(p);
-                    if (m) return m[1].trim();
-                }
-                return '-';
-            };
-
-            const normalize = (s) => (s || '').replace(/\s+/g, ' ').trim();
-            const fullN = normalize(full);
-
-            const getBetween = (startLabel, endLabel) => {
-                const startRe = (startLabel instanceof RegExp) ? startLabel : new RegExp(startLabel, 'i');
-                const endRe = (endLabel instanceof RegExp) ? endLabel : new RegExp(endLabel, 'i');
-
-                const sm = fullN.match(startRe);
-                if (!sm || sm.index == null) return '-';
-                const startIdx = sm.index + sm[0].length;
-
-                const after = fullN.slice(startIdx);
-                const em = after.match(endRe);
-                const chunk = em && em.index != null ? after.slice(0, em.index) : after;
-                return normalize(chunk) || '-';
-            };
-
-            let invoiceNo = '-', date = '-', payment = '-', deliveryMethod = '-', buyer = '-', seller = '-';
-
-            const tableMatch = fullN.match(/No\.?\s*Pesanan\s+Tanggal\s*Transaksi\s+Metode\s*Pembayaran\s+Jasa\s*Kirim\s+([A-Z0-9]+)\s+([0-9]{2}\/[0-9]{2}\/[0-9]{2,4})\s+(Bank\s+[A-Za-z]+|ShopeePay|OVO|DANA|GoPay|COD|QRIS|Kartu\s+Kredit\s*\S*)\s+(\S+)/i);
-            if (tableMatch) {
-                invoiceNo = tableMatch[1];
-                date = tableMatch[2];
-                payment = tableMatch[3];
-                deliveryMethod = tableMatch[4];
-            } else {
-                invoiceNo = getBetween(/No\.?\s*Pesanan\s*/i, /Tanggal\s*Transaksi\b/i);
-                date = getBetween(/Tanggal\s*Transaksi\s*/i, /Metode\s*Pembayaran\b/i);
-                payment = getBetween(/Metode\s*Pembayaran\s*/i, /Jasa\s*Kirim\b/i);
-                deliveryMethod = getBetween(/Jasa\s*Kirim\s*/i, /Rincian\s*Pesanan\b/i);
-            }
-
-            buyer = getBetween(/Nama\s*Pembeli\s*:\s*/i, /Nama\s*Penjual\s*:\s*/i);
-            seller = getBetween(/Nama\s*Penjual\s*:\s*/i, /Alamat\s*Pembeli\s*:\s*/i);
-
-            if (invoiceNo === '-' || /\s/.test(invoiceNo)) {
-                invoiceNo = get([
-                    /No\.?\s*Pesanan\s*[:\s]*([A-Z0-9]{8,})/i,
-                    /No\.?\s*Pesanan\s+([A-Z0-9]{8,})/i,
-                    /(?:No\.?\s*(?:Invoice|Faktur))\s*[:\s]*([A-Z0-9-]+)/i,
-                    /(?:Invoice|Order)\s*#?\s*[:\s]*([A-Z0-9-]+)/i
-                ]);
-            }
-
-            if (date === '-' || date.length > 20) {
-                date = get([
-                    /Tanggal\s*Transaksi\s*[:\s]*([0-3]?\d[\/\-\.][01]?\d[\/\-\.]\d{2,4})/i,
-                    /Tanggal\s*Transaksi\s+([0-3]?\d[\/\-\.][01]?\d[\/\-\.]\d{2,4})/i,
-                    /(?:Tanggal|Date|Tgl)\s*[:\s]*([0-3]?\d[\/\-\.][01]?\d[\/\-\.]\d{2,4})/i
-                ]);
-            }
-
-            if (buyer === '-' || buyer.length > 60) {
-                buyer = get([
-                    /Nama\s*Pembeli\s*[:\s]*(\S+)/i,
-                    /(?:Buyer|Customer|Kepada)\s*[:\s]*([^]+?)(?=\s+(?:Nama\s*Penjual|Alamat|No\.|Rincian)\b)/i
-                ]);
-            }
-
-            if (deliveryMethod === '-' || deliveryMethod.length > 30) {
-                deliveryMethod = get([
-                    /Jasa\s*Kirim\s*[:\s]*(Regular|Ekonomi|Express|Same\s*Day|Instant|Next\s*Day|Cargo|JNE|J&T|SiCepat|AnterAja|GoSend|GrabExpress)/i
-                ]);
-            }
-
-            if (seller === '-' || seller.length > 80) {
-                seller = get([
-                    /Nama\s*Penjual\s*[:\s]*(.+?)(?=\s{2,}|\n|Alamat|No\.|Rincian|Tanggal|$)/i,
-                    /(?:Seller|Vendor|Dari)\s*[:\s]*([^]+?)(?=\s+(?:Alamat|No\.|Rincian|Tanggal)\b)/i
-                ]);
-            }
-
-            const bankMatch = payment.match(/Bank\s+[A-Za-z]+/i);
-            if (bankMatch) {
-                payment = bankMatch[0].trim();
-            }
-
-            if (payment === '-' || payment.length > 80) {
-                payment = get([
-                    /Metode\s*Pembayaran\s*[:\s]*(Bank\s+[A-Za-z]+)/i,
-                    /Metode\s*Pembayaran\s*[:\s]*([^]+?)(?=\s+(?:Jasa\s*Kirim|Regular|Ekonomi|Express)\b)/i,
-                    /Metode\s*Pembayaran\s*[:\s]*((?:\w+\s*Pay|ShopeePay|OVO|DANA|GoPay|COD|Transfer|QRIS|Kartu\s+Kredit))/i,
-                    /Metode\s*Pembayaran\s*[:\s]*(\S+(?:\s+\S+)?)/i
-                ]);
-            }
-
-            const cleanOne = (s) => normalize((s || '-').replace(/^[:\s]+/, '').replace(/\s{2,}/g, ' '));
-            const buyerClean = cleanOne(buyer);
-            const sellerClean = cleanOne(seller);
-            const paymentClean = cleanOne(payment);
-            const deliveryMethodClean = cleanOne(deliveryMethod);
-            const invoiceNoClean = cleanOne(invoiceNo);
-            const dateClean = cleanOne(date);
-
-            const items = [];
-
-            const headerMatch = full.match(/Rincian\s*Pesanan[\s\S]*?Kuantitas\s+Subtotal/i);
-            const itemsText = headerMatch 
-                ? full.substring(headerMatch.index + headerMatch[0].length)
-                : full;
-                        
-            const rpMatches = [...itemsText.matchAll(/Rp\s*([\d.,]+)\s+(\d+)\s+Rp\s*([\d.,]+)/g)];
-            if (rpMatches.length) {
-                let lastEnd = 0;
-                rpMatches.forEach((m) => {
-                    const matchStart = m.index;
-                    let namePart = itemsText.substring(lastEnd, matchStart).trim();
-                    lastEnd = matchStart + m[0].length;
-
-                    namePart = namePart.replace(/Nota\s*Pesanan/gi, '');
-                    namePart = namePart.replace(/^\s*\d{1,3}\s+/, '');
-                    namePart = namePart.replace(/^\s*\d\s*(?=[A-Za-z])/, '');
-                    namePart = namePart.trim();
-
-                    if (!namePart || /^(?:subtotal|total|pengiriman|diskon|layanan|biaya|kuantitas)/i.test(namePart)) return;
-
-                    const price = parseNumber(m[1]);
-                    const qty = parseInt(m[2]);
-                    const subtotal = parseNumber(m[3]);
-
-                    items.push({ name: namePart, price, qty, subtotal });
-                });
-            }
-
-            if (!items.length) {
-                const strat1 = [...full.matchAll(/(\d+)\s+(.+?)\s+Rp\s*([\d.,]+)\s+(\d+)\s+Rp\s*([\d.,]+)/g)];
-                if (strat1.length) {
-                    strat1.forEach(m => items.push({ name: m[2].trim(), price: parseNumber(m[3]), qty: parseInt(m[4]), subtotal: parseNumber(m[5]) }));
-                }
-            }
-
-            if (!items.length) {
-                const strat2 = [...full.matchAll(/(.+?)\s+Rp\s*([\d.,]+)\s*[xX×]\s*(\d+)\s*=?\s*Rp\s*([\d.,]+)/g)];
-                strat2.forEach(m => items.push({ name: m[1].trim(), price: parseNumber(m[2]), qty: parseInt(m[3]), subtotal: parseNumber(m[4]) }));
-            }
-
-            if (!items.length) {
-                const strat3 = [...full.matchAll(/(\d+)\s+(.+?)\s+([\d.,]{3,})\s+(\d+)\s+([\d.,]{3,})/g)];
-                strat3.forEach(m => {
-                    const name = m[2].trim();
-                    if (!/subtotal|total|pesanan|pengiriman|diskon|layanan/i.test(name)) {
-                        items.push({ name, price: parseNumber(m[3]), qty: parseInt(m[4]), subtotal: parseNumber(m[5]) });
-                    }
-                });
-            }
-
-            if (!items.length) {
-                const words = full.split(/\s+/);
-                const rpIndices = [];
-                words.forEach((w, i) => { if (/^Rp[\d.,]+$/i.test(w) || /^[\d.,]{4,}$/.test(w)) rpIndices.push(i); });
-                for (let i = 0; i < rpIndices.length - 1; i++) {
-                    const pi = rpIndices[i];
-                    const si = rpIndices[i + 1];
-                    if (si - pi <= 3) {
-                        const priceStr = words[pi].replace(/^Rp/i, '');
-                        const qtyStr = words.slice(pi + 1, si).join('');
-                        const subtotalStr = words[si].replace(/^Rp/i, '');
-                        const qty = parseInt(qtyStr);
-                        if (qty > 0 && qty < 10000) {
-                            let nameStart = (i > 0) ? rpIndices[i - 1] + 1 : Math.max(0, pi - 10);
-                            while (nameStart < pi && /^\d+$/.test(words[nameStart])) nameStart++;
-                            const name = words.slice(nameStart, pi).join(' ').trim();
-                            if (name && !/subtotal|total|pesanan|pengiriman|diskon|layanan|biaya/i.test(name)) {
-                                items.push({ name, price: parseNumber(priceStr), qty, subtotal: parseNumber(subtotalStr) });
-                                i++;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (!items.length) {
-                const strat5 = [...full.matchAll(/([A-Za-z][A-Za-z\s&\-\.]+?)\s+Rp\s*([\d.,]+)/g)];
-                const filtered = strat5.filter(m => !/subtotal|total|pesanan|pengiriman|diskon|layanan|biaya|pembayaran/i.test(m[1]));
-                filtered.forEach(m => {
-                    items.push({ name: m[1].trim(), price: parseNumber(m[2]), qty: 1, subtotal: parseNumber(m[2]) });
-                });
-            }
-
-            const subtotal = parseNumber(get([
-                /(?:Subtotal\s*Pesanan)\s*[:\s]*Rp\s*([\d.,]+)/i,
-                /Subtotal\s*[:\s]*Rp?\s*([\d.,]+)/i
-            ]));
-            const shipping = parseNumber(get([
-                /(?:Subtotal\s*Pengiriman)\s*[:\s]*Rp?\s*([\d.,]+)/i,
-                /(?:Ongkos\s*Kirim|Ongkir|Shipping)\s*[:\s]*Rp?\s*([\d.,]+)/i
-            ]));
-            const serviceFee = parseNumber(get([
-                /(?:Biaya\s*Penanganan)\s*[:\s]*Rp?\s*([\d.,]+)/i,
-                /(?:Biaya\s*Layanan)\s*[:\s]*Rp?\s*([\d.,]+)/i,
-                /(?:Biaya\s*Jasa\s*Aplikasi)\s*[:\s]*Rp?\s*([\d.,]+)/i,
-                /(?:Service\s*Fee|Service)\s*[:\s]*Rp?\s*([\d.,]+)/i
-            ]));
-            const discount = parseNumber(get([
-                /(?:Total\s*Diskon\s*Pengiriman)\s*[:\s]*-?\s*Rp?\s*([\d.,]+)/i,
-                /(?:Diskon\s*Pengiriman)\s*[:\s]*-?\s*Rp?\s*([\d.,]+)/i,
-                /(?:Voucher\s*Pengiriman)\s*[:\s]*-?\s*Rp?\s*([\d.,]+)/i,
-                /(?:Diskon\s*Produk)\s*[:\s]*-?\s*Rp?\s*([\d.,]+)/i,
-                /(?:Total\s*Diskon)\s*[:\s]*-?\s*Rp?\s*([\d.,]+)/i,
-                /(?:Diskon|Discount)\s*[:\s]*-?\s*Rp?\s*([\d.,]+)/i,
-                /(?:Voucher)\s*[:\s]*-?\s*Rp?\s*([\d.,]+)/i
-            ]));
-            const total = parseNumber(get([
-                /(?:Total\s*Pembayaran)\s*[:\s]*Rp?\s*([\d.,]+)/i,
-                /(?:Grand\s*Total)\s*[:\s]*Rp?\s*([\d.,]+)/i
-            ]));
-
-            return { invoiceNo: invoiceNoClean, date: dateClean, buyer: buyerClean, seller: sellerClean, payment: paymentClean, deliveryMethod: deliveryMethodClean, items, subtotal, shipping, serviceFee, discount, total };
         }
 
         function parseNumber(str) {
-            if (!str || str === '-') return 0;
-            return parseFloat(str.replace(/[^\d]/g, '')) || 0;
+            if (!str) return 0;
+            return parseInt(str.toString().replace(/[^\d]/g, '')) || 0;
         }
 
         function formatRp(num) {
-            return 'Rp' + num.toLocaleString('id-ID');
+            return 'Rp ' + num.toLocaleString('id-ID');
         }
 
-        function displayInvoiceInfo(data) {
-            const sec = document.getElementById('invoiceDataSection');
-            const table = document.getElementById('invoiceInfo');
-            const rows = [
-                ['No. Pesanan', data.invoiceNo],
-                ['Tanggal Transaksi', data.date],
-                ['Nama Pembeli', data.buyer],
-                ['Nama Penjual', data.seller],
-                ['Metode Pembayaran', data.payment],
-                ['Jasa Kirim', data.deliveryMethod]
-            ];
-            table.innerHTML = rows.map(([l, v]) =>
-                `<tr><td class="label-cell">${l}</td><td class="value-cell">: ${v}</td></tr>`
-            ).join('');
-            sec.classList.remove('hidden');
-        }
+        function parseInvoice(text) {
+            const data = {
+                noPesanan: '', tanggal: '', pembeli: '', penjual: '',
+                metodePembayaran: '', metodePengiriman: '',
+                items: [], subtotal: 0, ongkir: 0, biayaLayanan: 0,
+                diskonPengiriman: 0, diskonVoucherShopee: 0, total: 0
+            };
 
-        function displayItems(items) {
-            const sec = document.getElementById('itemsSection');
-            const tbody = document.getElementById('itemsBody');
-            if (items.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;padding:20px;">Tidak ada item terdeteksi</td></tr>';
-            } else {
-                tbody.innerHTML = items.map((item, i) =>
-                    `<tr>
-                        <td>${i + 1}</td>
-                        <td>${item.name}</td>
-                        <td style="text-align:center">${item.qty}</td>
-                        <td style="text-align:right">${formatRp(item.price)}</td>
-                        <td style="text-align:right">${formatRp(item.subtotal)}</td>
-                    </tr>`
-                ).join('');
+            // No Pesanan
+            const noPesananMatch = text.match(/(?:No\.?\s*Pesanan|Order\s*No)[:\s]*([A-Z0-9]+)/i);
+            if (noPesananMatch) data.noPesanan = noPesananMatch[1];
+
+            // Tanggal
+            const tanggalMatch = text.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/);
+            if (tanggalMatch) data.tanggal = tanggalMatch[1];
+
+            // Pembeli
+            const pembeliMatch = text.match(/(?:Pembeli|Buyer|Penerima|Kepada)[:\s]*([^\n,]+)/i);
+            if (pembeliMatch) data.pembeli = pembeliMatch[1].trim();
+
+            // Penjual
+            const penjualMatch = text.match(/(?:Penjual|Seller|Pengirim|Dari)[:\s]*([^\n,]+)/i);
+            if (penjualMatch) data.penjual = penjualMatch[1].trim();
+
+            // Metode Pembayaran
+            const pembayaranKeywords = ['Bank Transfer', 'BCA', 'BNI', 'BRI', 'Mandiri', 'ShopeePay', 'OVO', 'GoPay', 'DANA', 'COD', 'Kartu Kredit'];
+            for (const keyword of pembayaranKeywords) {
+                if (text.toLowerCase().includes(keyword.toLowerCase())) {
+                    data.metodePembayaran = keyword;
+                    break;
+                }
             }
-            sec.classList.remove('hidden');
+
+            // Metode Pengiriman
+            const pengirimanKeywords = ['JNE', 'J&T', 'SiCepat', 'Anteraja', 'Ninja', 'Pos Indonesia', 'Grab', 'GoSend', 'SPX', 'Shopee Express'];
+            for (const keyword of pengirimanKeywords) {
+                if (text.toLowerCase().includes(keyword.toLowerCase())) {
+                    data.metodePengiriman = keyword;
+                    break;
+                }
+            }
+
+            // Parse Items - Multiple strategies
+            const itemPatterns = [
+                /Rp\s*([\d.,]+)\s+(\d+)\s+Rp\s*([\d.,]+)/g,
+                /(\d+)\s+([^\n]+?)\s+Rp\s*([\d.,]+)\s+(\d+)\s+Rp\s*([\d.,]+)/g,
+                /([^\n]+?)\s+Rp\s*([\d.,]+)\s*x\s*(\d+)\s*=?\s*Rp\s*([\d.,]+)/g
+            ];
+
+            let itemMatches = text.match(/Rp\s*[\d.,]+\s+\d+\s+Rp\s*[\d.,]+/g);
+            if (itemMatches) {
+                itemMatches.forEach((match, index) => {
+                    const numbers = match.match(/[\d.,]+/g);
+                    if (numbers && numbers.length >= 3) {
+                        data.items.push({
+                            nama: `Produk ${index + 1}`,
+                            harga: parseNumber(numbers[0]),
+                            qty: parseInt(numbers[1]) || 1,
+                            subtotal: parseNumber(numbers[2])
+                        });
+                    }
+                });
+            }
+
+            // Subtotal - prioritaskan "Subtotal Pesanan"
+            const subtotalPesananMatch = text.match(/Subtotal\s*Pesanan[\s\S]*?Rp\s*([\d.,]+)/i);
+            const subtotalProdukMatch = text.match(/Subtotal\s*Produk[\s\S]*?Rp\s*([\d.,]+)/i);
+            if (subtotalPesananMatch) {
+                data.subtotal = parseNumber(subtotalPesananMatch[1]);
+            } else if (subtotalProdukMatch) {
+                data.subtotal = parseNumber(subtotalProdukMatch[1]);
+            }
+
+            // Ongkir
+            const ongkirMatch = text.match(/(?:Subtotal\s*Pengiriman|Ongkos\s*Kirim|Ongkir|Shipping)[\s\S]*?Rp\s*([\d.,]+)/i);
+            if (ongkirMatch) data.ongkir = parseNumber(ongkirMatch[1]);
+
+            // Biaya Layanan
+            const biayaLayananMatch = text.match(/Biaya\s*(?:Layanan|Penanganan|Jasa\s*Aplikasi)[\s\S]*?Rp\s*([\d.,]+)/i);
+            if (biayaLayananMatch) data.biayaLayanan = parseNumber(biayaLayananMatch[1]);
+
+            // Total Diskon Pengiriman
+            const diskonPengirimanMatch = text.match(/(?:Total\s*)?Diskon\s*Pengiriman[\s\S]*?-?\s*Rp\s*([\d.,]+)/i);
+            if (diskonPengirimanMatch) data.diskonPengiriman = parseNumber(diskonPengirimanMatch[1]);
+
+            // Diskon Voucher Shopee (posisi di bawah Total Diskon Pengiriman)
+            const diskonVoucherShopeeMatch = text.match(/Diskon\s*Voucher\s*Shopee[\s\S]*?-?\s*Rp\s*([\d.,]+)/i);
+            if (diskonVoucherShopeeMatch) data.diskonVoucherShopee = parseNumber(diskonVoucherShopeeMatch[1]);
+
+            // Total Pembayaran
+            const totalMatch = text.match(/Total\s*Pembayaran[\s\S]*?Rp\s*([\d.,]+)/i);
+            if (totalMatch) data.total = parseNumber(totalMatch[1]);
+
+            return data;
         }
 
-        function displaySummary(data) {
-            const sec = document.getElementById('summarySection');
-            const table = document.getElementById('summaryTable');
-            const rows = [
-                ['Subtotal Pesanan', formatRp(data.subtotal)],
-                ['Subtotal Pengiriman', formatRp(data.shipping)],
-                ['Biaya Layanan', formatRp(data.serviceFee)],
-                ['Total Diskon Pengiriman', '- ' + formatRp(data.discount)],
-            ];
-            let html = rows.map(([l, v]) =>
-                `<tr><td class="sum-label">${l}</td><td class="sum-value">${v}</td></tr>`
-            ).join('');
-            html += `<tr class="total-row"><td class="sum-label">Total Pembayaran</td><td class="sum-value">${formatRp(data.total)}</td></tr>`;
-            table.innerHTML = html;
-            sec.classList.remove('hidden');
+        function displayInvoice(data) {
+            // Info Grid
+            document.getElementById('invoiceInfo').innerHTML = `
+                <div class="info-item"><div class="info-label">No. Pesanan</div><div class="info-value">${data.noPesanan || '-'}</div></div>
+                <div class="info-item"><div class="info-label">Tanggal</div><div class="info-value">${data.tanggal || '-'}</div></div>
+                <div class="info-item"><div class="info-label">Pembeli</div><div class="info-value">${data.pembeli || '-'}</div></div>
+                <div class="info-item"><div class="info-label">Penjual</div><div class="info-value">${data.penjual || '-'}</div></div>
+                <div class="info-item"><div class="info-label">Metode Pembayaran</div><div class="info-value">${data.metodePembayaran || '-'}</div></div>
+                <div class="info-item"><div class="info-label">Metode Pengiriman</div><div class="info-value">${data.metodePengiriman || '-'}</div></div>
+            `;
+
+            // Items Table
+            const tbody = document.querySelector('#itemsTable tbody');
+            tbody.innerHTML = data.items.map(item => `
+                <tr>
+                    <td>${item.nama}</td>
+                    <td class="text-center">${item.qty}</td>
+                    <td class="text-right">${formatRp(item.harga)}</td>
+                    <td class="text-right">${formatRp(item.subtotal)}</td>
+                </tr>
+            `).join('');
+
+            // Summary Section
+            let summaryHTML = `
+                <div class="summary-row"><span>Subtotal Produk</span><span>${formatRp(data.subtotal)}</span></div>
+                <div class="summary-row"><span>Ongkos Kirim</span><span>${formatRp(data.ongkir)}</span></div>
+                <div class="summary-row"><span>Biaya Layanan</span><span>${formatRp(data.biayaLayanan)}</span></div>
+                <div class="summary-row"><span>Total Diskon Pengiriman</span><span class="discount">-${formatRp(data.diskonPengiriman)}</span></div>
+            `;
+            if (data.diskonVoucherShopee > 0) {
+                summaryHTML += `<div class="summary-row"><span>Diskon Voucher Shopee</span><span class="discount">-${formatRp(data.diskonVoucherShopee)}</span></div>`;
+            }
+            summaryHTML += `<div class="summary-row total"><span>Total Pembayaran</span><span>${formatRp(data.total)}</span></div>`;
+            document.getElementById('summarySection').innerHTML = summaryHTML;
         }
 
         function verifyCalculations(data) {
-            const results = [];
-                        
-            data.items.forEach((item, i) => {
-                const expected = item.price * item.qty;
-                const valid = Math.abs(expected - item.subtotal) < 2;
-                results.push({
-                    label: `Item ${i + 1}: ${item.name} (${item.qty} × ${formatRp(item.price)})`,
-                    expected: formatRp(expected),
-                    actual: formatRp(item.subtotal),
-                    valid
-                });
+            let allValid = true;
+            let verificationHTML = '';
+
+            // Verify each item
+            data.items.forEach((item, index) => {
+                const expectedSubtotal = item.harga * item.qty;
+                const isValid = Math.abs(expectedSubtotal - item.subtotal) <= 2;
+                if (!isValid) allValid = false;
+                verificationHTML += `
+                    <div class="verification-item">
+                        <div>
+                            <strong>Item ${index + 1}: ${item.nama}</strong><br>
+                            <small>${formatRp(item.harga)} × ${item.qty} = ${formatRp(item.subtotal)}</small>
+                        </div>
+                        <span class="badge ${isValid ? 'badge-success' : 'badge-danger'}">${isValid ? '✓ Sesuai' : '✗ Tidak Sesuai'}</span>
+                    </div>
+                `;
             });
 
-            const itemsSum = data.items.length > 0 ? data.items.reduce((s, it) => s + it.subtotal, 0) : 0;
-            if (data.items.length > 0) {
-                const valid = Math.abs(itemsSum - data.subtotal) < 2;
-                results.push({ label: 'Jumlah Subtotal Item', expected: formatRp(itemsSum), actual: formatRp(data.subtotal), valid });
+            // Total Semua Item
+            const totalItemsCalculated = data.items.reduce((sum, item) => sum + item.subtotal, 0);
+            const totalItemsValid = Math.abs(totalItemsCalculated - data.subtotal) <= 2;
+            if (!totalItemsValid) allValid = false;
+            verificationHTML += `
+                <div class="verification-item">
+                    <div>
+                        <strong>Total Semua Item</strong><br>
+                        <small>Jumlah ${data.items.length} item = ${formatRp(totalItemsCalculated)}</small>
+                    </div>
+                    <span class="badge ${totalItemsValid ? 'badge-success' : 'badge-danger'}">${totalItemsValid ? '✓ Sesuai' : '✗ Tidak Sesuai'}</span>
+                </div>
+            `;
+
+            // Total Pesanan
+            verificationHTML += `
+                <div class="verification-item">
+                    <div>
+                        <strong>Total Pesanan</strong><br>
+                        <small>Subtotal = ${formatRp(data.subtotal)}</small>
+                    </div>
+                    <span class="badge ${totalItemsValid ? 'badge-success' : 'badge-danger'}">${totalItemsValid ? '✓ Sesuai' : '✗ Tidak Sesuai'}</span>
+                </div>
+            `;
+
+            // Total Pembayaran
+            const calculatedTotal = data.subtotal + data.ongkir + data.biayaLayanan - data.diskonPengiriman - data.diskonVoucherShopee;
+            const totalValid = Math.abs(calculatedTotal - data.total) <= 2;
+            if (!totalValid) allValid = false;
+            
+            let formulaStr = `${formatRp(data.subtotal)} + ${formatRp(data.ongkir)} + ${formatRp(data.biayaLayanan)} - ${formatRp(data.diskonPengiriman)}`;
+            if (data.diskonVoucherShopee > 0) {
+                formulaStr += ` - ${formatRp(data.diskonVoucherShopee)}`;
             }
+            formulaStr += ` = ${formatRp(calculatedTotal)}`;
+            
+            verificationHTML += `
+                <div class="verification-item">
+                    <div>
+                        <strong>Total Pembayaran</strong><br>
+                        <small>${formulaStr}</small>
+                    </div>
+                    <span class="badge ${totalValid ? 'badge-success' : 'badge-danger'}">${totalValid ? '✓ Sesuai' : '✗ Tidak Sesuai'}</span>
+                </div>
+            `;
 
-            const expectedTotal = data.subtotal + data.shipping + data.serviceFee - data.discount;
-            const totalValid = Math.abs(expectedTotal - data.total) < 2;
-            results.push({ label: 'Perhitungan Total Pembayaran', expected: formatRp(expectedTotal), actual: formatRp(data.total), valid: totalValid });
+            document.getElementById('verificationResults').innerHTML = verificationHTML;
 
-            const container = document.getElementById('verifResults');
-            let html = '';
-
-            data.items.forEach((item, idx) => {
-                const itemSubtotal = item.price * item.qty;
-                html += `<div style="margin-bottom:12px;">
-                    <div style="font-weight:bold;color:#1a1a2e;font-size:14px;">Item ${idx + 1}: ${item.name.length > 50 ? item.name.substring(0, 50) + '...' : item.name}</div>
-                    <div style="color:#666;font-size:13px;">${formatRp(item.price)} × ${item.qty} = ${formatRp(itemSubtotal)}</div>
-                </div>`;
-            });
-
-            html += `<div class="calc-section">
-                <div class="calc-title">Total Semua Item</div>
-                <div class="calc-detail">Jumlah ${data.items.length} item = ${formatRp(itemsSum)}</div>
-            </div>`;
-
-            const subtotalResult = results.find(r => r.label === 'Jumlah Subtotal Item');
-            if (subtotalResult) {
-                html += `<div class="verif-item" style="margin-bottom:12px;">
-                    <span class="check-label">${subtotalResult.label}</span>
-                    <span class="badge ${subtotalResult.valid ? 'valid' : 'invalid'}">${subtotalResult.valid ? '✓ Sesuai' : '✗ Tidak Sesuai'}</span>
-                </div>`;
-            }
-
-            html += `<div class="calc-section">
-                <div class="calc-detail" style="font-weight:bold;color:#000;">Total Pesanan</div>
-                <div class="calc-detail">Subtotal = ${formatRp(data.subtotal)}</div>
-            </div>`;
-
-            const pesananValid = Math.abs(itemsSum - data.subtotal) < 2;
-            html += `<div class="verif-item" style="margin-bottom:12px;">
-                <span class="check-label">Total Pesanan</span>
-                <span class="badge ${pesananValid ? 'valid' : 'invalid'}">${pesananValid ? '✓ Sesuai' : '✗ Tidak Sesuai'}</span>
-            </div>`;
-
-            const parts = [];
-            parts.push(formatRp(data.subtotal));
-            if (data.shipping) parts.push('+ ' + formatRp(data.shipping));
-            if (data.serviceFee) parts.push('+ ' + formatRp(data.serviceFee));
-            if (data.discount) parts.push('- ' + formatRp(data.discount));
-            const calcStr = parts.join(' ') + ' = ' + formatRp(expectedTotal);
-
-            html += `<div class="calc-section">
-                <div class="calc-title">Total Pembayaran</div>
-                <div class="calc-detail">${calcStr}</div>
-            </div>`;
-
-            const totalResult = results.find(r => r.label === 'Perhitungan Total Pembayaran');
-            if (totalResult) {
-                html += `<div class="verif-item" style="margin-top:4px;">
-                    <span class="check-label">${totalResult.label}</span>
-                    <span class="badge ${totalResult.valid ? 'valid' : 'invalid'}">${totalResult.valid ? '✓ Sesuai' : '✗ Tidak Sesuai'}</span>
-                </div>`;
-            }
-
-            container.innerHTML = html;
-            document.getElementById('verifSection').classList.remove('hidden');
-
-            const allValid = results.every(r => r.valid);
+            // Status Box
             const statusBox = document.getElementById('statusBox');
-            statusBox.className = 'status-box ' + (allValid ? 'valid' : 'invalid');
+            statusBox.className = `status-box ${allValid ? 'valid' : 'invalid'}`;
             statusBox.innerHTML = allValid
-                ? '✅ Semua perhitungan invoice VALID'
-                : '⚠️ Terdapat ketidaksesuaian pada perhitungan invoice';
-            document.getElementById('statusSection').classList.remove('hidden');
-            document.getElementById('resetBtn').style.display = 'block';
+                ? '<h3>✅ Invoice Valid</h3><p>Semua perhitungan pada invoice sudah sesuai</p>'
+                : '<h3>⚠️ Perlu Perhatian</h3><p>Terdapat ketidaksesuaian pada perhitungan invoice</p>';
+        }
+
+        function parseAndDisplay(text) {
+            const data = parseInvoice(text);
+            displayInvoice(data);
+            verifyCalculations(data);
+            loading.style.display = 'none';
+            result.style.display = 'block';
         }
 
         function resetUpload() {
+            uploadArea.style.display = 'block';
+            loading.style.display = 'none';
+            result.style.display = 'none';
             fileInput.value = '';
-            loading.classList.remove('active');
-            document.getElementById('invoiceDataSection').classList.add('hidden');
-            document.getElementById('itemsSection').classList.add('hidden');
-            document.getElementById('summarySection').classList.add('hidden');
-            document.getElementById('verifSection').classList.add('hidden');
-            document.getElementById('statusSection').classList.add('hidden');
-            document.getElementById('resetBtn').style.display = 'none';
-            document.getElementById('uploadSection').classList.remove('hidden');
-            uploadArea.scrollIntoView({ behavior: 'smooth' });
         }
     </script>
 </body>
