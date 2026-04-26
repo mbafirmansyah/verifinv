@@ -51,9 +51,25 @@
         .btn { display: inline-block; padding: 10px 20px; border-radius: 5px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.3s; }
         .btn-primary { background: #ee4d2d; color: white; }
         .btn-primary:hover { background: #d73d1d; }
+        .btn-secondary { background: #4CAF50; color: white; }
+        .btn-secondary:hover { background: #388E3C; }
         .btn-block { display: block; width: 100%; margin-top: 20px; }
         .hidden { display: none; }
         .discount { color: #2e7d32; }
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-group .btn { flex: 1; text-align: center; }
+         .accumulation-section { margin-top: 30px; background: #ffffff; color: #333; border-radius: 12px; padding: 24px; border: 2px solid #ee4d2d; box-shadow: 0 4px 15px rgba(238,77,45,0.12); }
+         .accumulation-section .section-title { color: #ee4d2d; border-bottom: 2px solid #fee8e2; padding-bottom: 10px; font-size: 16px; }
+         .acc-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
+         .acc-item { background: #fff7f5; padding: 14px; border-radius: 10px; border: 1px solid #fee8e2; }
+         .acc-item .acc-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+         .acc-item .acc-value { font-size: 18px; font-weight: 700; color: #333; }
+         .acc-item.highlight { grid-column: 1 / -1; background: linear-gradient(135deg, #ee4d2d, #ff6b4a); text-align: center; border: none; }
+         .acc-item.highlight .acc-label { color: rgba(255,255,255,0.85); }
+         .acc-item.highlight .acc-value { font-size: 24px; color: #ffffff; }
+         .invoice-list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #fff7f5; border-radius: 8px; margin-bottom: 6px; font-size: 13px; border: 1px solid #fee8e2; }
+         .invoice-list-item .inv-no { font-weight: 600; color: #555; }
+         .invoice-list-item .inv-total { color: #ee4d2d; font-weight: 700; }
     </style>
 </head>
 <body>
@@ -66,8 +82,8 @@
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">📄</div>
                 <div class="upload-text">Klik atau drag & drop file PDF invoice</div>
-                <div class="upload-hint">Mendukung file PDF dari Shopee</div>
-                <input type="file" id="fileInput" accept=".pdf">
+                <div class="upload-hint">Mendukung file PDF dari Shopee (bisa pilih banyak file sekaligus)</div>
+                <input type="file" id="fileInput" accept=".pdf" multiple>
             </div>
             <div class="loading" id="loading">
                 <div class="spinner"></div>
@@ -101,8 +117,12 @@
                     <div id="verificationResults"></div>
                 </div>
                 <div id="statusBox"></div>
-                <button class="btn btn-primary btn-block" onclick="resetUpload()">Upload Invoice Lain</button>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="tambahPDF()">➕ Tambah PDF</button>
+                    <button class="btn btn-primary" onclick="resetAll()">🔄 Reset Semua</button>
+                </div>
             </div>
+            <div id="accumulationContainer"></div>
         </div>
     </div>
 
@@ -114,11 +134,21 @@
         const loading = document.getElementById('loading');
         const result = document.getElementById('result');
 
+        let allInvoices = [];
+
         uploadArea.addEventListener('click', () => fileInput.click());
         uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
         uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
-        uploadArea.addEventListener('drop', (e) => { e.preventDefault(); uploadArea.classList.remove('dragover'); if (e.dataTransfer.files.length) processFile(e.dataTransfer.files[0]); });
-        fileInput.addEventListener('change', (e) => { if (e.target.files.length) processFile(e.target.files[0]); });
+        uploadArea.addEventListener('drop', (e) => { e.preventDefault(); uploadArea.classList.remove('dragover'); if (e.dataTransfer.files.length) processMultipleFiles(e.dataTransfer.files); });
+        fileInput.addEventListener('change', (e) => { if (e.target.files.length) processMultipleFiles(e.target.files); });
+
+        async function processMultipleFiles(files) {
+            const pdfFiles = Array.from(files).filter(f => f.type === 'application/pdf');
+            if (pdfFiles.length === 0) { alert('Mohon upload file PDF'); return; }
+            for (const file of pdfFiles) {
+                await processFile(file);
+            }
+        }
 
         async function processFile(file) {
             if (file.type !== 'application/pdf') { alert('Mohon upload file PDF'); return; }
@@ -159,23 +189,18 @@
                 diskonPengiriman: 0, diskonVoucherShopee: 0, total: 0
             };
 
-            // No Pesanan
             const noPesananMatch = text.match(/(?:No\.?\s*Pesanan|Order\s*No)[:\s]*([A-Z0-9]+)/i);
             if (noPesananMatch) data.noPesanan = noPesananMatch[1];
 
-            // Tanggal
             const tanggalMatch = text.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/);
             if (tanggalMatch) data.tanggal = tanggalMatch[1];
 
-            // Pembeli
             const pembeliMatch = text.match(/(?:Pembeli|Buyer|Penerima|Kepada)[:\s]*([^\n,]+)/i);
             if (pembeliMatch) data.pembeli = pembeliMatch[1].trim();
 
-            // Penjual
             const penjualMatch = text.match(/(?:Penjual|Seller|Pengirim|Dari)[:\s]*([^\n,]+)/i);
             if (penjualMatch) data.penjual = penjualMatch[1].trim();
 
-            // Metode Pembayaran
             const pembayaranKeywords = ['Bank Transfer', 'BCA', 'BNI', 'BRI', 'Mandiri', 'ShopeePay', 'OVO', 'GoPay', 'DANA', 'COD', 'Kartu Kredit'];
             for (const keyword of pembayaranKeywords) {
                 if (text.toLowerCase().includes(keyword.toLowerCase())) {
@@ -184,7 +209,6 @@
                 }
             }
 
-            // Metode Pengiriman
             const pengirimanKeywords = ['JNE', 'J&T', 'SiCepat', 'Anteraja', 'Ninja', 'Pos Indonesia', 'Grab', 'GoSend', 'SPX', 'Shopee Express'];
             for (const keyword of pengirimanKeywords) {
                 if (text.toLowerCase().includes(keyword.toLowerCase())) {
@@ -192,13 +216,6 @@
                     break;
                 }
             }
-
-            // Parse Items - Multiple strategies
-            const itemPatterns = [
-                /Rp\s*([\d.,]+)\s+(\d+)\s+Rp\s*([\d.,]+)/g,
-                /(\d+)\s+([^\n]+?)\s+Rp\s*([\d.,]+)\s+(\d+)\s+Rp\s*([\d.,]+)/g,
-                /([^\n]+?)\s+Rp\s*([\d.,]+)\s*x\s*(\d+)\s*=?\s*Rp\s*([\d.,]+)/g
-            ];
 
             let itemMatches = text.match(/Rp\s*[\d.,]+\s+\d+\s+Rp\s*[\d.,]+/g);
             if (itemMatches) {
@@ -215,7 +232,6 @@
                 });
             }
 
-            // Subtotal - prioritaskan "Subtotal Pesanan"
             const subtotalPesananMatch = text.match(/Subtotal\s*Pesanan[\s\S]*?Rp\s*([\d.,]+)/i);
             const subtotalProdukMatch = text.match(/Subtotal\s*Produk[\s\S]*?Rp\s*([\d.,]+)/i);
             if (subtotalPesananMatch) {
@@ -224,23 +240,18 @@
                 data.subtotal = parseNumber(subtotalProdukMatch[1]);
             }
 
-            // Ongkir
             const ongkirMatch = text.match(/(?:Subtotal\s*Pengiriman|Ongkos\s*Kirim|Ongkir|Shipping)[\s\S]*?Rp\s*([\d.,]+)/i);
             if (ongkirMatch) data.ongkir = parseNumber(ongkirMatch[1]);
 
-            // Biaya Layanan
             const biayaLayananMatch = text.match(/Biaya\s*(?:Layanan|Penanganan|Jasa\s*Aplikasi)[\s\S]*?Rp\s*([\d.,]+)/i);
             if (biayaLayananMatch) data.biayaLayanan = parseNumber(biayaLayananMatch[1]);
 
-            // Total Diskon Pengiriman
             const diskonPengirimanMatch = text.match(/(?:Total\s*)?Diskon\s*Pengiriman[\s\S]*?-?\s*Rp\s*([\d.,]+)/i);
             if (diskonPengirimanMatch) data.diskonPengiriman = parseNumber(diskonPengirimanMatch[1]);
 
-            // Diskon Voucher Shopee (posisi di bawah Total Diskon Pengiriman)
             const diskonVoucherShopeeMatch = text.match(/Diskon\s*Voucher\s*Shopee[\s\S]*?-?\s*Rp\s*([\d.,]+)/i);
             if (diskonVoucherShopeeMatch) data.diskonVoucherShopee = parseNumber(diskonVoucherShopeeMatch[1]);
 
-            // Total Pembayaran
             const totalMatch = text.match(/Total\s*Pembayaran[\s\S]*?Rp\s*([\d.,]+)/i);
             if (totalMatch) data.total = parseNumber(totalMatch[1]);
 
@@ -248,7 +259,6 @@
         }
 
         function displayInvoice(data) {
-            // Info Grid
             document.getElementById('invoiceInfo').innerHTML = `
                 <div class="info-item"><div class="info-label">No. Pesanan</div><div class="info-value">${data.noPesanan || '-'}</div></div>
                 <div class="info-item"><div class="info-label">Tanggal</div><div class="info-value">${data.tanggal || '-'}</div></div>
@@ -258,7 +268,6 @@
                 <div class="info-item"><div class="info-label">Metode Pengiriman</div><div class="info-value">${data.metodePengiriman || '-'}</div></div>
             `;
 
-            // Items Table
             const tbody = document.querySelector('#itemsTable tbody');
             tbody.innerHTML = data.items.map(item => `
                 <tr>
@@ -269,7 +278,6 @@
                 </tr>
             `).join('');
 
-            // Summary Section
             let summaryHTML = `
                 <div class="summary-row"><span>Subtotal Produk</span><span>${formatRp(data.subtotal)}</span></div>
                 <div class="summary-row"><span>Ongkos Kirim</span><span>${formatRp(data.ongkir)}</span></div>
@@ -287,7 +295,6 @@
             let allValid = true;
             let verificationHTML = '';
 
-            // Verify each item
             data.items.forEach((item, index) => {
                 const expectedSubtotal = item.harga * item.qty;
                 const isValid = Math.abs(expectedSubtotal - item.subtotal) <= 2;
@@ -303,7 +310,6 @@
                 `;
             });
 
-            // Total Semua Item
             const totalItemsCalculated = data.items.reduce((sum, item) => sum + item.subtotal, 0);
             const totalItemsValid = Math.abs(totalItemsCalculated - data.subtotal) <= 2;
             if (!totalItemsValid) allValid = false;
@@ -317,7 +323,6 @@
                 </div>
             `;
 
-            // Total Pesanan
             verificationHTML += `
                 <div class="verification-item">
                     <div>
@@ -328,7 +333,6 @@
                 </div>
             `;
 
-            // Total Pembayaran
             const calculatedTotal = data.subtotal + data.ongkir + data.biayaLayanan - data.diskonPengiriman - data.diskonVoucherShopee;
             const totalValid = Math.abs(calculatedTotal - data.total) <= 2;
             if (!totalValid) allValid = false;
@@ -351,7 +355,6 @@
 
             document.getElementById('verificationResults').innerHTML = verificationHTML;
 
-            // Status Box
             const statusBox = document.getElementById('statusBox');
             statusBox.className = `status-box ${allValid ? 'valid' : 'invalid'}`;
             statusBox.innerHTML = allValid
@@ -361,10 +364,87 @@
 
         function parseAndDisplay(text) {
             const data = parseInvoice(text);
+            allInvoices.push(data);
             displayInvoice(data);
             verifyCalculations(data);
             loading.style.display = 'none';
             result.style.display = 'block';
+            renderAccumulation();
+        }
+
+        function renderAccumulation() {
+            const container = document.getElementById('accumulationContainer');
+            if (allInvoices.length < 2) { container.innerHTML = ''; return; }
+
+            const acc = allInvoices.reduce((a, d) => {
+                a.subtotal += d.subtotal;
+                a.ongkir += d.ongkir;
+                a.biayaLayanan += d.biayaLayanan;
+                a.diskonPengiriman += d.diskonPengiriman;
+                a.diskonVoucherShopee += d.diskonVoucherShopee;
+                a.total += d.total;
+                a.totalItems += d.items.reduce((s, item) => s + item.qty, 0);
+                return a;
+            }, { subtotal: 0, ongkir: 0, biayaLayanan: 0, diskonPengiriman: 0, diskonVoucherShopee: 0, total: 0, totalItems: 0 });
+
+            let listHTML = allInvoices.map((inv, i) => `
+                <div class="invoice-list-item">
+                    <span class="inv-no">#${i + 1} — ${inv.noPesanan || 'Tanpa Nomor'}</span>
+                    <span class="inv-total">${formatRp(inv.total)}</span>
+                </div>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="accumulation-section">
+                    <div class="section-title">📊 Akumulasi ${allInvoices.length} Invoice</div>
+                    ${listHTML}
+                    <div class="acc-grid" style="margin-top:15px;">
+                        <div class="acc-item"><div class="acc-label">Total Produk</div><div class="acc-value">${acc.totalItems} item</div></div>
+                        <div class="acc-item"><div class="acc-label">Subtotal Produk</div><div class="acc-value">${formatRp(acc.subtotal)}</div></div>
+                        <div class="acc-item"><div class="acc-label">Total Ongkir</div><div class="acc-value">${formatRp(acc.ongkir)}</div></div>
+                        <div class="acc-item"><div class="acc-label">Total Biaya Layanan</div><div class="acc-value">${formatRp(acc.biayaLayanan)}</div></div>
+                        <div class="acc-item"><div class="acc-label">Total Diskon Pengiriman</div><div class="acc-value" style="color:#81c784;">-${formatRp(acc.diskonPengiriman)}</div></div>
+                        <div class="acc-item"><div class="acc-label">Total Diskon Voucher</div><div class="acc-value" style="color:#81c784;">-${formatRp(acc.diskonVoucherShopee)}</div></div>
+                        <div class="acc-item highlight"><div class="acc-label">GRAND TOTAL PEMBAYARAN</div><div class="acc-value">${formatRp(acc.total)}</div></div>
+                    </div>
+                    <div style="margin-top:15px; background:rgba(255,255,255,0.15); padding:15px; border-radius:10px;">
+                        <label style="font-size:13px; opacity:0.9;">💰 Pinjam Uang</label>
+                        <input type="text" id="pinjamUangInput" placeholder="Masukkan nominal pinjaman" 
+                            style="width:100%; padding:10px; border:none; border-radius:8px; margin-top:8px; font-size:16px; font-weight:bold;"
+                            oninput="hitungKembalian()" />
+                        <div id="kembalianResult" style="margin-top:12px; display:none;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.1); padding:12px; border-radius:8px; margin-bottom:8px;">
+                                <span style="font-size:13px; opacity:0.9;">Pinjam Uang</span>
+                                <span id="pinjamUangDisplay" style="font-weight:bold;"></span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.1); padding:12px; border-radius:8px; margin-bottom:8px;">
+                                <span style="font-size:13px; opacity:0.9;">Grand Total Pembayaran</span>
+                                <span id="grandTotalDisplay" style="font-weight:bold;">${formatRp(acc.total)}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; background:#fee8e2; padding:14px; border-radius:8px; border:1px solid #f5c4b8;">
+                                <span style="font-size:14px; font-weight:bold;">🔄 Kembalian</span>
+                                <span id="kembalianDisplay" style="font-size:18px; font-weight:bold; color:#ee4d2d;"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('pinjamUangInput').dataset.grandTotal = acc.total;
+        }
+
+        function tambahPDF() {
+            result.style.display = 'none';
+            uploadArea.style.display = 'block';
+            fileInput.value = '';
+        }
+
+        function resetAll() {
+            allInvoices = [];
+            document.getElementById('accumulationContainer').innerHTML = '';
+            uploadArea.style.display = 'block';
+            loading.style.display = 'none';
+            result.style.display = 'none';
+            fileInput.value = '';
         }
 
         function resetUpload() {
@@ -372,6 +452,25 @@
             loading.style.display = 'none';
             result.style.display = 'none';
             fileInput.value = '';
+        }
+
+        function hitungKembalian() {
+            const input = document.getElementById('pinjamUangInput');
+            const raw = input.value.replace(/[^0-9]/g, '');
+            const pinjam = parseInt(raw) || 0;
+            // format input with dots
+            input.value = raw ? parseInt(raw).toLocaleString('id-ID') : '';
+            const grandTotal = parseInt(input.dataset.grandTotal) || 0;
+            const kembalian = pinjam - grandTotal;
+            const resultDiv = document.getElementById('kembalianResult');
+            if (pinjam > 0) {
+                resultDiv.style.display = 'block';
+                document.getElementById('pinjamUangDisplay').textContent = formatRp(pinjam);
+                document.getElementById('kembalianDisplay').textContent = formatRp(kembalian);
+                document.getElementById('kembalianDisplay').style.color = kembalian >= 0 ? '#ee4d2d' : '#d32f2f';
+            } else {
+                resultDiv.style.display = 'none';
+            }
         }
     </script>
 </body>
