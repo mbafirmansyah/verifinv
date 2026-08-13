@@ -186,7 +186,7 @@
                 noPesanan: '', tanggal: '', pembeli: '', penjual: '',
                 metodePembayaran: '', metodePengiriman: '',
                 items: [], subtotal: 0, ongkir: 0, biayaLayanan: 0,
-                diskonPengiriman: 0, diskonVoucherShopee: 0, total: 0
+                diskonPengiriman: 0, diskonVoucherShopee: 0, diskonVoucherToko: 0, total: 0
             };
 
             const noPesananMatch = text.match(/(?:No\.?\s*Pesanan|Order\s*No)[:\s]*([A-Z0-9]+)/i);
@@ -252,6 +252,9 @@
             const diskonVoucherShopeeMatch = text.match(/Diskon\s*Voucher\s*Shopee[\s\S]*?-?\s*Rp\s*([\d.,]+)/i);
             if (diskonVoucherShopeeMatch) data.diskonVoucherShopee = parseNumber(diskonVoucherShopeeMatch[1]);
 
+            const diskonVoucherTokoMatch = text.match(/Diskon\s*Voucher\s*Toko[\s\S]*?-?\s*Rp\s*([\d.,]+)/i);
+            if (diskonVoucherTokoMatch) data.diskonVoucherToko = parseNumber(diskonVoucherTokoMatch[1]);
+
             const totalMatch = text.match(/Total\s*Pembayaran[\s\S]*?Rp\s*([\d.,]+)/i);
             if (totalMatch) data.total = parseNumber(totalMatch[1]);
 
@@ -284,6 +287,10 @@
                 <div class="summary-row"><span>Biaya Layanan</span><span>${formatRp(data.biayaLayanan)}</span></div>
                 <div class="summary-row"><span>Total Diskon Pengiriman</span><span class="discount">-${formatRp(data.diskonPengiriman)}</span></div>
             `;
+            
+            if (data.diskonVoucherToko > 0) {
+                summaryHTML += `<div class="summary-row"><span>Diskon Voucher Toko</span><span class="discount">-${formatRp(data.diskonVoucherToko)}</span></div>`;
+            }
             if (data.diskonVoucherShopee > 0) {
                 summaryHTML += `<div class="summary-row"><span>Diskon Voucher Shopee</span><span class="discount">-${formatRp(data.diskonVoucherShopee)}</span></div>`;
             }
@@ -333,11 +340,14 @@
                 </div>
             `;
 
-            const calculatedTotal = data.subtotal + data.ongkir + data.biayaLayanan - data.diskonPengiriman - data.diskonVoucherShopee;
+            const calculatedTotal = data.subtotal + data.ongkir + data.biayaLayanan - data.diskonPengiriman - data.diskonVoucherShopee - data.diskonVoucherToko;
             const totalValid = Math.abs(calculatedTotal - data.total) <= 2;
             if (!totalValid) allValid = false;
             
             let formulaStr = `${formatRp(data.subtotal)} + ${formatRp(data.ongkir)} + ${formatRp(data.biayaLayanan)} - ${formatRp(data.diskonPengiriman)}`;
+            if (data.diskonVoucherToko > 0) {
+                formulaStr += ` - ${formatRp(data.diskonVoucherToko)}`;
+            }
             if (data.diskonVoucherShopee > 0) {
                 formulaStr += ` - ${formatRp(data.diskonVoucherShopee)}`;
             }
@@ -382,10 +392,11 @@
                 a.biayaLayanan += d.biayaLayanan;
                 a.diskonPengiriman += d.diskonPengiriman;
                 a.diskonVoucherShopee += d.diskonVoucherShopee;
+                a.diskonVoucherToko += d.diskonVoucherToko;
                 a.total += d.total;
                 a.totalItems += d.items.reduce((s, item) => s + item.qty, 0);
                 return a;
-            }, { subtotal: 0, ongkir: 0, biayaLayanan: 0, diskonPengiriman: 0, diskonVoucherShopee: 0, total: 0, totalItems: 0 });
+            }, { subtotal: 0, ongkir: 0, biayaLayanan: 0, diskonPengiriman: 0, diskonVoucherShopee: 0, diskonVoucherToko: 0, total: 0, totalItems: 0 });
 
             let listHTML = allInvoices.map((inv, i) => `
                 <div class="invoice-list-item">
@@ -404,7 +415,8 @@
                         <div class="acc-item"><div class="acc-label">Total Ongkir</div><div class="acc-value">${formatRp(acc.ongkir)}</div></div>
                         <div class="acc-item"><div class="acc-label">Total Biaya Layanan</div><div class="acc-value">${formatRp(acc.biayaLayanan)}</div></div>
                         <div class="acc-item"><div class="acc-label">Total Diskon Pengiriman</div><div class="acc-value" style="color:#81c784;">-${formatRp(acc.diskonPengiriman)}</div></div>
-                        <div class="acc-item"><div class="acc-label">Total Diskon Voucher</div><div class="acc-value" style="color:#81c784;">-${formatRp(acc.diskonVoucherShopee)}</div></div>
+                        <div class="acc-item"><div class="acc-label">Total Diskon Voucher Toko</div><div class="acc-value" style="color:#81c784;">-${formatRp(acc.diskonVoucherToko)}</div></div>
+                        <div class="acc-item"><div class="acc-label">Total Diskon Voucher Shopee</div><div class="acc-value" style="color:#81c784;">-${formatRp(acc.diskonVoucherShopee)}</div></div>
                         <div class="acc-item highlight"><div class="acc-label">GRAND TOTAL PEMBAYARAN</div><div class="acc-value">${formatRp(acc.total)}</div></div>
                     </div>
                     <div style="margin-top:15px; background:rgba(255,255,255,0.15); padding:15px; border-radius:10px;">
